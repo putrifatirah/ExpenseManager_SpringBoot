@@ -1,8 +1,11 @@
 package com.expensemanager.expensemanager.service;
 
+import java.util.Date;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -18,6 +21,21 @@ public class ExpenseService {
 
     public List<Expense> getExpensesForToday() {
         return expenseRepository.findByDate(LocalDate.now());
+    }
+
+    public List<Expense> getExpensesByDate(LocalDate date) {
+        return expenseRepository.findByDate(date);
+    }
+
+    public List<LocalDate> getDistinctDates() {
+        List<Date> distinctDates = expenseRepository.findDistinctDates();
+        return distinctDates.stream()
+                .map(date -> date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate())
+                .collect(Collectors.toList());
+    }
+
+    public List<Expense> getExpensesForDate(LocalDate date) {
+        return expenseRepository.findByDate(date);
     }
 
     public Expense addExpense(String name, double amount) {
