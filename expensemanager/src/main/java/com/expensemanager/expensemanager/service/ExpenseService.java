@@ -38,8 +38,8 @@ public class ExpenseService {
         return expenseRepository.findByDate(date);
     }
 
-    public Expense addExpense(String name, double amount) {
-        Expense expense = new Expense(name, amount, LocalDate.now());
+    public Expense addExpense(String name, double amount, LocalDate date) {
+        Expense expense = new Expense(name, amount, date);
         return expenseRepository.save(expense);
     }
 
