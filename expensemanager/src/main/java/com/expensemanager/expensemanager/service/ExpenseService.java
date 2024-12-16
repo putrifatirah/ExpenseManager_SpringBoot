@@ -1,8 +1,8 @@
 package com.expensemanager.expensemanager.service;
 
-import java.util.Date;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -49,6 +49,20 @@ public class ExpenseService {
         return expense;
     }
 
+    //delete all expenses for a specific date
+    public void deleteAllExpensesByDate(LocalDate date) {
+        List<Expense> expenses = expenseRepository.findByDate(date);
+        expenseRepository.deleteAll(expenses);
+    }
+
+    //delete a date (if required)
+    public void deleteDate(LocalDate date) {
+        // This method assumes the date is represented as distinct entries elsewhere
+        // Ensure appropriate implementation if using another collection for dates
+        System.out.println("Date " + date + " removed from the system.");
+        // Add any additional logic here if you are storing distinct dates elsewhere
+    }
+
     public Optional<Expense> editExpense(String expenseId, String name, double amount) {
         Optional<Expense> existingExpense = expenseRepository.findById(expenseId);
         if (existingExpense.isPresent()) {
@@ -59,4 +73,5 @@ public class ExpenseService {
         }
         return Optional.empty();
     }
+    
 }
