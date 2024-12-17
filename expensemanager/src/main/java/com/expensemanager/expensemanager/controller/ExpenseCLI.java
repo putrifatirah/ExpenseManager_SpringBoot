@@ -50,7 +50,16 @@ public class ExpenseCLI implements CommandLineRunner {
         // Sort the dates in chronological order (oldest to latest)
         distinctDates.sort(LocalDate::compareTo);
 
-        System.out.println("\n--- Available Dates ---");
+        // Calculate and display grand total
+        double grandTotal = distinctDates.stream()
+            .flatMap(date -> expenseService.getExpensesByDate(date).stream())
+            .mapToDouble(Expense::getAmount)
+            .sum();
+        System.out.printf("\n------------------------------");
+        System.out.printf("\n    Grand Total: RM %.2f   ", grandTotal);
+        System.out.printf("\n------------------------------");
+
+        System.out.println("\n--- Expenses by Dates ---");
         for (int i = 0; i < distinctDates.size(); i++) {
             System.out.printf("%d. %s%n", i + 1, distinctDates.get(i));
         }
@@ -61,6 +70,7 @@ public class ExpenseCLI implements CommandLineRunner {
             System.out.println("Operation cancelled.");
             return;
         }
+    
 
         // Fetch and display expenses for the selected date
         List<Expense> expenses = expenseService.getExpensesByDate(selectedDate);
@@ -199,8 +209,8 @@ public class ExpenseCLI implements CommandLineRunner {
             String confirmation = scanner.nextLine().trim().toLowerCase();
             if (confirmation.equals("y")) {
                 expenseService.deleteAllExpensesByDate(selectedDate);
-                expenseService.deleteDate(selectedDate); // Remove the date
-                System.out.println("All expenses and the date " + selectedDate + " have been deleted.");
+                // expenseService.deleteDate(selectedDate); // Remove the date
+                System.out.println("All expenses for date " + selectedDate + " have been deleted.");
             } else {
                 System.out.println("Operation cancelled. No expenses or date were deleted.");
             }
