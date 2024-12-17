@@ -1,10 +1,10 @@
 package com.expensemanager.expensemanager.controller;
 
 import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Scanner;
-import java.util.Comparator;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
@@ -52,8 +52,23 @@ public class ExpenseCLI implements CommandLineRunner {
         // Fetch and display distinct dates
         List<LocalDate> distinctDates = expenseService.getDistinctDates();
 
+        // Check if there are no expenses
+        if (distinctDates.isEmpty()) {
+            System.out.println("\nNo expenses exist.");
+            return;
+        }
+
         // Sort the dates in chronological order (oldest to latest)
         distinctDates.sort(LocalDate::compareTo);
+
+        // Calculate and display grand total
+        double grandTotal = distinctDates.stream()
+            .flatMap(date -> expenseService.getExpensesByDate(date).stream())
+            .mapToDouble(Expense::getAmount)
+            .sum();
+        System.out.printf("\n------------------------------");
+        System.out.printf("\n    Grand Total: RM %.2f   ", grandTotal);
+        System.out.printf("\n------------------------------");
 
         System.out.println("\n--- Expenses by Dates ---");
         for (int i = 0; i < distinctDates.size(); i++) {
@@ -138,10 +153,33 @@ public class ExpenseCLI implements CommandLineRunner {
 
         // Add new expense
         scanner.nextLine(); // Consume newline
-        System.out.print("Enter expense name: ");
-        String name = scanner.nextLine();
-        System.out.print("Enter amount: ");
-        double amount = scanner.nextDouble();
+        String name = "";
+        while (true) {
+            System.out.print("Enter expense name: ");
+            name = scanner.nextLine().trim();
+            if (name.isEmpty()) {
+                System.out.println("Please enter a name.");
+            } else {
+                break;
+            }
+        }
+
+        double amount = 0.0;
+        while (true) {
+            System.out.print("Enter amount: ");
+            try {
+                amount = Double.parseDouble(scanner.nextLine());
+                if (amount <= 0) {
+                    System.out.println("Please enter a positive amount.");
+                } else {
+                    break;
+                }
+            } catch (NumberFormatException e) {
+                System.out.println("Please enter a valid amount.");
+            }
+        }
+
+        // Save the validated expense
         Expense expense = expenseService.addExpense(name, amount, selectedDate);
         System.out.printf("Added expense: %s, Amount: %.2f, Date: %s%n", expense.getName(), expense.getAmount(), selectedDate);
     }
@@ -149,6 +187,10 @@ public class ExpenseCLI implements CommandLineRunner {
     private void deleteExpense() {
         // Fetch and display distinct dates
         List<LocalDate> distinctDates = expenseService.getDistinctDates();
+        
+        // Sort the dates in chronological order (oldest to latest)
+        distinctDates.sort(LocalDate::compareTo);
+        
         System.out.println("\n--- Available Dates ---");
         for (int i = 0; i < distinctDates.size(); i++) {
             System.out.printf("%d. %s%n", i + 1, distinctDates.get(i));
@@ -170,14 +212,26 @@ public class ExpenseCLI implements CommandLineRunner {
         }
 
         // Get user input to select an expense to delete
-        System.out.print("Select an expense to delete by entering its number or enter -1 to cancel: ");
-        int choice = scanner.nextInt() - 1;
+        System.out.print("Enter the index of the expense to delete (0 to delete all, -1 to quit): ");
+        int choice = scanner.nextInt();
 
-        if (choice == -2) {
+        if (choice == -1) {
             System.out.println("Operation cancelled.");
-            return;
-        } else if (choice >= 0 && choice < expenses.size()) {
-            Expense expenseToDelete = expenses.get(choice);
+        } else if (choice == 0) {
+            // Confirm before deleting all expenses and the date
+            System.out.print("Are you sure you want to delete ALL expenses and the date? (y/n): ");
+            scanner.nextLine(); // Consume newline
+            String confirmation = scanner.nextLine().trim().toLowerCase();
+            if (confirmation.equals("y")) {
+                expenseService.deleteAllExpensesByDate(selectedDate);
+            // expenseService.deleteDate(selectedDate); // Remove the date
+            System.out.println("All expenses for date " + selectedDate + " have been deleted.");
+            } else {
+                System.out.println("Operation cancelled. No expenses or date were deleted.");
+            }
+        } else if (choice > 0 && choice <= expenses.size()) {
+            // Delete a single expense
+            Expense expenseToDelete = expenses.get(choice - 1);
             Optional<Expense> deletedExpense = expenseService.deleteExpense(expenseToDelete.getId());
             deletedExpense.ifPresentOrElse(
                     expense -> System.out.printf("Deleted expense: %s%n", expense.getName()),
@@ -190,6 +244,14 @@ public class ExpenseCLI implements CommandLineRunner {
     private void editExpense() {
         // Fetch and display distinct dates
         List<LocalDate> distinctDates = expenseService.getDistinctDates();
+        if (distinctDates.isEmpty()) {
+            System.out.println("No expenses exist to edit.");
+            return;
+        }
+
+        // Sort the dates in chronological order (oldest to latest)
+        distinctDates.sort(LocalDate::compareTo);
+        
         System.out.println("\n--- Available Dates ---");
         for (int i = 0; i < distinctDates.size(); i++) {
             System.out.printf("%d. %s%n", i + 1, distinctDates.get(i));
@@ -211,19 +273,48 @@ public class ExpenseCLI implements CommandLineRunner {
         }
 
         // Get user input to select an expense to edit
-        System.out.print("Select an expense to edit by entering its number or enter -1 to cancel: ");
+        System.out.print("Enter the index of the expense to edit (-1 to cancel): ");
         int choice = scanner.nextInt() - 1;
 
         if (choice == -2) {
             System.out.println("Operation cancelled.");
-            return;
         } else if (choice >= 0 && choice < expenses.size()) {
             Expense expenseToEdit = expenses.get(choice);
+
+            // Input validation for expense name
             scanner.nextLine(); // Consume newline
-            System.out.print("Enter new name: ");
-            String name = scanner.nextLine();
-            System.out.print("Enter new amount: ");
-            double amount = scanner.nextDouble();
+            String name;
+            while (true) {
+                System.out.print("Enter new name: ");
+                name = scanner.nextLine().trim();
+                if (name.isEmpty()) {
+                    System.out.println("Please enter a name.");
+                } else {
+                    break;
+                }
+            }
+
+            // Input validation for amount
+            double amount = 0.0;
+            while (true) {
+                System.out.print("Enter new amount: ");
+                try {
+                    amount = Double.parseDouble(scanner.nextLine());
+                    if (amount <= 0) {
+                        System.out.println("Please enter a positive amount.");
+                    } else {
+                        break;
+                    }
+                } catch (NumberFormatException e) {
+                    System.out.println("Please enter a valid amount.");
+                }
+            }
+
+            // scanner.nextLine(); // Consume newline
+            // System.out.print("Enter new name: ");
+            // String name = scanner.nextLine();
+            // System.out.print("Enter new amount: ");
+            // double amount = scanner.nextDouble();
             Optional<Expense> editedExpense = expenseService.editExpense(expenseToEdit.getId(), name, amount);
             editedExpense.ifPresentOrElse(
                     expense -> System.out.printf("Updated expense: %s, Amount: %.2f%n", expense.getName(),
