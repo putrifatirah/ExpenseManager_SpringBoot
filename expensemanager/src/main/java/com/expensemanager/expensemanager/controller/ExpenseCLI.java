@@ -33,7 +33,7 @@ public class ExpenseCLI implements CommandLineRunner {
             int choice = scanner.nextInt();
 
             switch (choice) {
-                case 1 -> viewExpenses2();
+                case 1 -> viewExpenses();
                 case 2 -> addExpense();
                 case 3 -> deleteExpense();
                 case 4 -> editExpense();
@@ -43,7 +43,7 @@ public class ExpenseCLI implements CommandLineRunner {
         }
     }
 
-    private void viewExpenses2() {
+    private void viewExpenses() {
         // Fetch and display distinct dates
         List<LocalDate> distinctDates = expenseService.getDistinctDates();
 
@@ -56,7 +56,7 @@ public class ExpenseCLI implements CommandLineRunner {
         }
 
         // Get user input to select a date
-        LocalDate selectedDate = getUserSelectedDate1(distinctDates);
+        LocalDate selectedDate = getUserSelectedDate(distinctDates, false);
         if (selectedDate == null) {
             System.out.println("Operation cancelled.");
             return;
@@ -72,39 +72,37 @@ public class ExpenseCLI implements CommandLineRunner {
         System.out.printf("Total Amount: %.2f\n", total);
     }
 
-    //for viewexpense, editexpense and deleteexpense
-    private LocalDate getUserSelectedDate1(List<LocalDate> dates) {
-        System.out.print("Select a date by entering its index (-1 to cancel): ");
-        int choice = scanner.nextInt();
-
-        if (choice == -1) {
-            return null;
-        } else if (choice > 0 && choice <= dates.size()) {
-            return dates.get(choice - 1);
-        } else {
-            System.out.println("Invalid choice. Defaulting to today's date.");
-            return LocalDate.now();
+    private LocalDate getUserSelectedDate(List<LocalDate> dates, boolean allowNewDate) {
+        while (true) { // Loop until a valid choice is made
+            if (allowNewDate) {
+                System.out.print("Select a date by entering its index (0 to create a new date, or -1 to cancel): ");
+            } else {
+                System.out.print("Select a date by entering its index (-1 to cancel): ");
+            }
+    
+            int choice = scanner.nextInt();
+    
+            if (choice == -1) {
+                return null; // User cancels
+            }
+    
+            if (allowNewDate && choice == 0) {
+                // User wants to create a new date
+                System.out.print("Enter new date (YYYY-MM-DD): ");
+                String dateInput = scanner.next();
+                try {
+                    return LocalDate.parse(dateInput);
+                } catch (Exception e) {
+                    System.out.println("Invalid date format. Please try again.");
+                }
+            } else if (choice > 0 && choice <= dates.size()) {
+                return dates.get(choice - 1); // Valid index selected
+            } else {
+                System.out.println("Invalid choice. Please try again.");
+            }
         }
     }
-
-    //for addexpense
-    private LocalDate getUserSelectedDate(List<LocalDate> dates) {
-        System.out.print("Select a date by entering its index (0 to create a new date, or -1 to cancel): ");
-        int choice = scanner.nextInt();
-
-        if (choice == -1) {
-            return null;
-        } else if (choice == 0) {
-            System.out.print("Enter new date (YYYY-MM-DD): ");
-            String dateInput = scanner.next();
-            return LocalDate.parse(dateInput);
-        } else if (choice > 0 && choice <= dates.size()) {
-            return dates.get(choice - 1);
-        } else {
-            System.out.println("Invalid choice. Defaulting to today's date.");
-            return LocalDate.now();
-        }
-    }
+    
 
     private void addExpense() {
         // Fetch and display distinct dates
@@ -119,7 +117,7 @@ public class ExpenseCLI implements CommandLineRunner {
         }
 
         // Get user input to select a date or create a new date
-        LocalDate selectedDate = getUserSelectedDate(distinctDates);
+        LocalDate selectedDate = getUserSelectedDate(distinctDates, true);
         if (selectedDate == null) {
             System.out.println("Operation cancelled.");
             return;
@@ -174,7 +172,7 @@ public class ExpenseCLI implements CommandLineRunner {
         }
         
         // Get user input to select a date
-        LocalDate selectedDate = getUserSelectedDate1(distinctDates);
+        LocalDate selectedDate = getUserSelectedDate(distinctDates, false);
         if (selectedDate == null) {
             System.out.println("Operation cancelled.");
             return;
@@ -213,15 +211,6 @@ public class ExpenseCLI implements CommandLineRunner {
             deletedExpense.ifPresentOrElse(
                     expense -> System.out.printf("Deleted expense: %s%n", expense.getName()),
                     () -> System.out.println("Expense not found."));
-
-        // if (choice == -2) {
-        //     System.out.println("Operation cancelled.");
-        // } else if (choice >= 1 && choice < expenses.size()) {
-        //     Expense expenseToDelete = expenses.get(choice);
-        //     Optional<Expense> deletedExpense = expenseService.deleteExpense(expenseToDelete.getId());
-        //     deletedExpense.ifPresentOrElse(
-        //             expense -> System.out.printf("Deleted expense: %s%n", expense.getName()),
-        //             () -> System.out.println("Expense not found."));
         } else {
             System.out.println("Invalid choice. No expense deleted.");
         }
@@ -242,7 +231,7 @@ public class ExpenseCLI implements CommandLineRunner {
         // System.out.println("-1. Cancel");
 
         // Get user input to select a date
-        LocalDate selectedDate = getUserSelectedDate1(distinctDates);
+        LocalDate selectedDate = getUserSelectedDate(distinctDates, false);
         if (selectedDate == null) {
             System.out.println("Operation cancelled.");
             return;
