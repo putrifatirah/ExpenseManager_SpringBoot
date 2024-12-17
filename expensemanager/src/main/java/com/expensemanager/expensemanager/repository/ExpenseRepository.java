@@ -11,6 +11,7 @@ import com.expensemanager.expensemanager.model.Expense;
 
 public interface ExpenseRepository extends MongoRepository<Expense, String> {
     List<Expense> findByDate(LocalDate date);
+    List<Expense> findByNameContainingIgnoreCase(String name);
 
     @Aggregation(pipeline = {
             "{ $group: { _id: '$date' } }"

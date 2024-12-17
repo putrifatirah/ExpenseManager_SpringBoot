@@ -73,5 +73,9 @@ public class ExpenseService {
         }
         return Optional.empty();
     }
+
+    public List<Expense> getExpensesByName(String name) {
+        return expenseRepository.findByNameContainingIgnoreCase(name);
+    }
     
 }
